@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LOGOS LOGIC ENGINE - LVM Edition</title>
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#050505">
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css"> <style>
+        body {
+            background-color: #050505;
+            color: #d4af37;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #terminal {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 1px solid #333;
+        }
+        #input-area {
+            padding: 15px;
+            background: #111;
+            display: flex;
+        }
+        input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            font-family: inherit;
+            font-size: 1.1em;
+            outline: none;
+        }
+        .status-bar {
+            font-size: 0.8em;
+            padding: 5px 20px;
+            background: #000;
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="status-bar">
+        <span>SYSTEM_ID: LVM-01</span>
+        <span id="node-status">NODE_STATUS: INITIALIZING...</span>
+        <span>VER: 2.0.0</span>
+    </div>
+
+    <div id="terminal">
+        <div style="color: #fff; margin-bottom: 20px;">
+            <h1># LOGOS LOGIC ENGINE</h1>
+            <p style="color: #888;">"The limits of my language mean the limits of my world."</p>
+        </div>
+        <div id="output-stream"></div>
+    </div>
+
+    <div id="input-area">
+        <span style="margin-right: 10px;">&gt;</span>
+        <input type="text" id="user-input" placeholder="Enter logic sequence..." autofocus>
+    </div>
+
+    <script src="LogosDecimal.js"></script>
+    <script src="LogosCore.js"></script>
+    <script src="lvm_bridge.js"></script>
+
+    <script>
+        // UI Control logic
+        const outputStream = document.getElementById('output-stream');
+        const userInput = document.getElementById('user-input');
+        const nodeStatus = document.getElementById('node-status');
+
+        function printToTerminal(text, type = 'normal') {
+            const div = document.createElement('div');
+            div.style.marginBottom = '10px';
+            if (type === 'system') div.style.color = '#d4af37';
+            if (type === 'error') div.style.color = '#ff0000';
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+            outputStream.appendChild(div);
+            outputStream.scrollTop = outputStream.scrollHeight;
+        }
+
+        // Bridgeの状態を監視
+        function updateSystemStatus(status) {
+            nodeStatus.textContent = `NODE_STATUS: ${status}`;
+            if (status === 'READY') {
+                nodeStatus.style.color = '#00ff00';
+                printToTerminal("SYSTEM_CORE: BRIDGE_ESTABLISHED. LOGOS_FILTER_ACTIVE.", "system");
+            }
+        }
+
+        userInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter' && userInput.value.trim() !== "") {
+                const msg = userInput.value;
+                printToTerminal(`USER: ${msg}`);
+                userInput.value = "";
+
+                // lvm_bridge.js を介してAPI通信
+                const response = await lvmBridge.sendMessage(msg);
+                printToTerminal(`LVM: ${response}`, 'system');
+            }
+        });
+
+        // サービスワーカーの登録
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('LVM_SW: REGISTERED', reg.scope))
+                    .catch(err => console.error('LVM_SW: REGISTRATION_FAILED', err));
+            });
+        }
+
+        window.onload = () => {
+            printToTerminal("Logos Logic Notebook v2.0.0 - Ready", "system");
+            printToTerminal("Analyzing Wittgenstein Tractatus 5.6...", "system");
+        };
+    </script>
+</body>
+</html>

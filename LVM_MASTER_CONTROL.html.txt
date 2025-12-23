@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LVM MASTER CONTROL v2.2</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --neon-gold: #d4af37;
+            --terminal-green: #00ff00;
+            --bg-black: #050505;
+        }
+        body {
+            background-color: var(--bg-black);
+            color: var(--neon-gold);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #terminal {
+            width: 90%;
+            max-width: 800px;
+            border: 1px solid var(--neon-gold);
+            padding: 20px;
+            background: rgba(20, 20, 20, 0.9);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        }
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--neon-gold);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .ready { color: var(--terminal-green); font-weight: bold; }
+        .loading { color: #f1c40f; animation: blink 1s infinite; }
+        @keyframes blink { 0% {opacity:1;} 50% {opacity:0.3;} 100% {opacity:1;} }
+        
+        #output {
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-left: 10px solid var(--neon-gold);
+            color: white;
+            padding: 5px 10px;
+            outline: none;
+            font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+
+<div id="terminal">
+    <div class="status-bar">
+        <span>SYSTEM: LVM_SOVEREIGN_CORE_v2.2</span>
+        <span>STATUS: <span id="system-status" class="loading">INITIALIZING...</span></span>
+    </div>
+
+    <div id="output">
+        [SYSTEM LOGS ADAPTED FOR JS_ENGINE_ONLY]<br>
+        > WAITING FOR CORE CONNECTIVITY...<br>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="user-input" placeholder="ENTER COMMAND..." autofocus>
+    </div>
+</div>
+
+<script src="LogosDecimal.js"></script>
+<script src="LogosCore.js"></script>
+<script src="lvm_bridge.js"></script>
+
+<script>
+    // システムステータスを更新する関数
+    function updateSystemStatus(status) {
+        const statusElement = document.getElementById('system-status');
+        const output = document.getElementById('output');
+        
+        statusElement.innerText = status;
+        if (status === 'READY') {
+            statusElement.className = 'ready';
+            output.innerHTML += `<br><span style="color:#00ff00">> LVM_CORE_v2.2: CONNECTION_ESTABLISHED.</span>`;
+            output.innerHTML += `<br>> ALL SYSTEMS OPERATIONAL.`;
+        }
+    }
+
+    // 以前の Service Worker 登録処理は、キャッシュエラー防止のため完全に削除しました。
+
+    // コマンド入力イベント
+    const inputField = document.getElementById('user-input');
+    inputField.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter') {
+            const cmd = inputField.value;
+            const output = document.getElementById('output');
+            output.innerHTML += `<br><span style="color:#fff">USER@LVM:~$ ${cmd}</span>`;
+            inputField.value = '';
+
+            // Bridge経由でメッセージ送信
+            if (window.lvmBridge) {
+                const response = await window.lvmBridge.sendMessage(cmd);
+                output.innerHTML += `<br>> ${response}`;
+            }
+            output.scrollTop = output.scrollHeight;
+        }
+    });
+
+    // 起動時の初期化ログ
+    window.addEventListener('load', () => {
+        console.log("LVM_UI: INTERFACE_LOADED");
+    });
+</script>
+
+</body>
+</html>
