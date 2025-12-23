@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LVM MASTER CONTROL v2.4.1</title>
+    <title>LVM MASTER CONTROL v2.4.2</title>
     <style>
         :root {
             --neon-gold: #d4af37;
@@ -36,7 +36,7 @@
             margin-bottom: 20px;
         }
         #output {
-            height: 350px;
+            height: 380px;
             overflow-y: auto;
             margin-bottom: 20px;
             font-size: 0.9em;
@@ -64,13 +64,13 @@
 
 <div id="terminal">
     <div class="status-bar">
-        <span>LVM_CORE_v2.4.1</span>
+        <span>LVM_CORE_v2.4.2</span>
         <span>STATUS: <span id="system-status" class="loading">INITIALIZING...</span></span>
     </div>
 
     <div id="output">
         [LOGOS_SYSTEM_BOOT_SEQUENCE]<br>
-        > SYNCHRONIZING_LOGIC_CORES...<br>
+        > SYNCHRONIZING_CORE_FRAGMENTS...<br>
     </div>
 
     <div class="input-area">
@@ -78,30 +78,49 @@
     </div>
 </div>
 
+<script src="LogosDecimal.js"></script>
+
 <script>
+    // --- 記憶層 (LogosStorage) ---
     window.LogosStorage = {
-        save: function(key, data) {
-            localStorage.setItem(`LVM_${key}`, JSON.stringify(data));
-            return true;
-        },
-        load: function(key) {
+        save: (key, data) => localStorage.setItem(`LVM_${key}`, JSON.stringify(data)),
+        load: (key) => {
             const data = localStorage.getItem(`LVM_${key}`);
             return data ? JSON.parse(data) : null;
         },
         getAssets: function() { return this.load('ASSETS') || {}; },
         registerAsset: function(symbol, details) {
             const assets = this.getAssets();
-            assets[symbol] = { symbol: symbol, balance: details.balance || '0' };
+            assets[symbol] = { symbol, balance: details.balance || '0' };
             this.save('ASSETS', assets);
-            console.log("STORAGE: ASSET_REGISTERED: " + symbol);
+            console.log("STORAGE: REGISTERED " + symbol);
         }
     };
-    console.log("LVM_STORAGE: CORE_INJECTED");
-</script>
 
-<script src="LogosDecimal.js"></script>
-<script src="LogosCore.js"></script>
-<script src="lvm_bridge.js"></script>
+    // --- 司令塔ロジック (lvm_bridge_logic) ---
+    window.LVM_BRIDGE = {
+        version: "2.4.2",
+        processCommand: function(input) {
+            const args = input.trim().toUpperCase().split(/\s+/);
+            const cmd = args[0];
+
+            if (cmd === "GENERATE") {
+                if (args[2]) {
+                    window.LogosStorage.registerAsset(args[2], { balance: "0" });
+                    window.sysLog(`SUCCESS: ${args[2]}_GENERATED`, "system");
+                } else {
+                    window.sysLog("USAGE: GENERATE CURRENCY [SYM]", "error");
+                }
+            } else if (cmd === "MINT") {
+                window.sysLog(`MINT_PROTOCOL_EXECUTED: ${args[1]} ${args[2]}`, "system");
+                // 数理処理が必要な場合は LogosDecimal を使用
+            } else {
+                window.sysLog(`UNKNOWN_COMMAND: ${cmd}`, "error");
+            }
+        }
+    };
+    console.log("LVM_BRIDGE: INTEGRATED_INTO_HTML");
+</script>
 
 <script>
     const output = document.getElementById('output');
@@ -129,28 +148,19 @@
             if (window.LVM_BRIDGE) {
                 window.LVM_BRIDGE.processCommand(cmd);
             } else {
-                sysLog("ERROR: BRIDGE_OFFLINE - RETRYING...", "error");
+                window.sysLog("ERROR: CORE_NOT_READY", "error");
             }
             inputField.value = '';
             output.scrollTop = output.scrollHeight;
         }
     });
 
-    // Bridgeの初期化を確実に待機するロジック
-    function startLVM() {
-        if (window.LVM_BRIDGE && window.LogosStorage) {
-            // Bridge側の初期化を再度叩く（もしStorage不足で止まっていた場合用）
-            if (typeof window.LVM_BRIDGE.init === 'function') {
-                window.LVM_BRIDGE.init();
-            }
-            sysLog("LVM_SYSTEM: ALL_SYSTEMS_OPERATIONAL_READY", "system");
-        } else {
-            console.log("LVM_BOOT: Waiting for dependencies...");
-            setTimeout(startLVM, 500);
-        }
-    }
-
-    window.addEventListener('load', startLVM);
+    // 起動シーケンス
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            window.sysLog("LVM_CORE: ALL_SYSTEMS_OPERATIONAL_READY", "system");
+        }, 800);
+    });
 </script>
 
 </body>
