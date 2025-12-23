@@ -4,14 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LOGOS LOGIC ENGINE - LVM Edition</title>
-    
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#050505">
-
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css"> <style>
+    <style>
         body {
             background-color: #050505;
             color: #d4af37;
@@ -57,7 +50,7 @@
     <div class="status-bar">
         <span>SYSTEM_ID: LVM-01</span>
         <span id="node-status">NODE_STATUS: INITIALIZING...</span>
-        <span>VER: 2.0.0</span>
+        <span>VER: 2.5.0</span>
     </div>
 
     <div id="terminal">
@@ -73,12 +66,25 @@
         <input type="text" id="user-input" placeholder="Enter logic sequence..." autofocus>
     </div>
 
+    <script>
+        window.LogosStorage = {
+            save: (key, data) => localStorage.setItem(`LVM_${key}`, JSON.stringify(data)),
+            load: (key) => JSON.parse(localStorage.getItem(`LVM_${key}`) || 'null'),
+            getAssets: function() { return this.load('ASSETS') || {}; },
+            registerAsset: function(symbol, details) {
+                const assets = this.getAssets();
+                assets[symbol] = { symbol, balance: details.balance || '0' };
+                this.save('ASSETS', assets);
+                console.log("STORAGE: ASSET_LOCKED: " + symbol);
+            }
+        };
+    </script>
+
     <script src="LogosDecimal.js"></script>
     <script src="LogosCore.js"></script>
     <script src="lvm_bridge.js"></script>
 
     <script>
-        // UI Control logic
         const outputStream = document.getElementById('output-stream');
         const userInput = document.getElementById('user-input');
         const nodeStatus = document.getElementById('node-status');
@@ -93,40 +99,42 @@
             outputStream.scrollTop = outputStream.scrollHeight;
         }
 
-        // Bridgeの状態を監視
-        function updateSystemStatus(status) {
-            nodeStatus.textContent = `NODE_STATUS: ${status}`;
-            if (status === 'READY') {
-                nodeStatus.style.color = '#00ff00';
-                printToTerminal("SYSTEM_CORE: BRIDGE_ESTABLISHED. LOGOS_FILTER_ACTIVE.", "system");
-            }
-        }
-
         userInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter' && userInput.value.trim() !== "") {
                 const msg = userInput.value;
                 printToTerminal(`USER: ${msg}`);
                 userInput.value = "";
 
-                // lvm_bridge.js を介してAPI通信
-                const response = await lvmBridge.sendMessage(msg);
-                printToTerminal(`LVM: ${response}`, 'system');
+                // ブリッジ経由でコマンド処理
+                // window.LVM_BRIDGE (大文字) と window.lvmBridge (小文字) 両方に対応
+                const bridge = window.LVM_BRIDGE || window.lvmBridge;
+                
+                if (bridge && typeof bridge.processCommand === 'function') {
+                    bridge.processCommand(msg);
+                } else {
+                    printToTerminal("ERROR: BRIDGE_NOT_FOUND. Check Console.", "error");
+                }
             }
         });
 
-        // サービスワーカーの登録
+        // 起動シーケンス
+        window.onload = () => {
+            printToTerminal("Logos Logic Notebook v2.5.0 - Ready", "system");
+            if (window.LogosStorage && (window.LVM_BRIDGE || window.lvmBridge)) {
+                nodeStatus.textContent = "NODE_STATUS: READY";
+                nodeStatus.style.color = "#00ff00";
+                printToTerminal("SYSTEM_CORE: ALL_SYSTEMS_OPERATIONAL.", "system");
+            } else {
+                printToTerminal("SYSTEM_CORE: WAITING_FOR_COMPONENTS...", "error");
+            }
+        };
+
+        // Service Worker の登録解除（キャッシュ問題を避けるため一時的に無効化を推奨）
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('LVM_SW: REGISTERED', reg.scope))
-                    .catch(err => console.error('LVM_SW: REGISTRATION_FAILED', err));
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for(let registration of registrations) { registration.unregister(); }
             });
         }
-
-        window.onload = () => {
-            printToTerminal("Logos Logic Notebook v2.0.0 - Ready", "system");
-            printToTerminal("Analyzing Wittgenstein Tractatus 5.6...", "system");
-        };
     </script>
 </body>
 </html>
