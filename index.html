@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LOGOS LOGIC ENGINE - LVM Edition</title>
+    <title>LOGOS LOGIC ENGINE - LVM Edition v2.5.5</title>
     <style>
         body {
             background-color: #050505;
@@ -43,6 +43,8 @@
             justify-content: space-between;
             color: #666;
         }
+        .ready { color: #00ff00 !important; }
+        .error { color: #ff0000 !important; }
     </style>
 </head>
 <body>
@@ -50,7 +52,7 @@
     <div class="status-bar">
         <span>SYSTEM_ID: LVM-01</span>
         <span id="node-status">NODE_STATUS: INITIALIZING...</span>
-        <span>VER: 2.5.0</span>
+        <span>VER: 2.5.5-ATOMIC</span>
     </div>
 
     <div id="terminal">
@@ -66,75 +68,72 @@
         <input type="text" id="user-input" placeholder="Enter logic sequence..." autofocus>
     </div>
 
-    <script>
-        window.LogosStorage = {
-            save: (key, data) => localStorage.setItem(`LVM_${key}`, JSON.stringify(data)),
-            load: (key) => JSON.parse(localStorage.getItem(`LVM_${key}`) || 'null'),
-            getAssets: function() { return this.load('ASSETS') || {}; },
-            registerAsset: function(symbol, details) {
-                const assets = this.getAssets();
-                assets[symbol] = { symbol, balance: details.balance || '0' };
-                this.save('ASSETS', assets);
-                console.log("STORAGE: ASSET_LOCKED: " + symbol);
-            }
-        };
-    </script>
-
     <script src="LogosDecimal.js"></script>
     <script src="LogosCore.js"></script>
-    <script src="lvm_bridge.js"></script>
-
     <script>
+        (function() {
+            // 1. 記憶層の即時確立
+            window.LogosStorage = {
+                save: (key, data) => localStorage.setItem(`LVM_${key}`, JSON.stringify(data)),
+                load: (key) => JSON.parse(localStorage.getItem(`LVM_${key}`) || 'null'),
+                getAssets: function() { return this.load('ASSETS') || {}; },
+                registerAsset: function(symbol, details) {
+                    const assets = this.getAssets();
+                    assets[symbol] = { symbol, balance: details.balance || '0' };
+                    this.save('ASSETS', assets);
+                    sysLog("STORAGE: ASSET_LOCKED: " + symbol, "system");
+                }
+            };
+
+            // 2. 通信橋の即時確立
+            window.LVM_BRIDGE = {
+                processCommand: function(input) {
+                    const args = input.trim().toUpperCase().split(/\s+/);
+                    if (args[0] === "GENERATE") {
+                        window.LogosStorage.registerAsset(args[2], { balance: "0" });
+                        sysLog(`SUCCESS: ${args[2]}_GENERATED`, "system");
+                    } else {
+                        sysLog(`UNKNOWN_COMMAND: ${args[0]}`, "error");
+                    }
+                }
+            };
+        })();
+
+        // UI制御
         const outputStream = document.getElementById('output-stream');
         const userInput = document.getElementById('user-input');
         const nodeStatus = document.getElementById('node-status');
 
-        function printToTerminal(text, type = 'normal') {
+        function sysLog(text, type = 'normal') {
             const div = document.createElement('div');
             div.style.marginBottom = '10px';
             if (type === 'system') div.style.color = '#d4af37';
-            if (type === 'error') div.style.color = '#ff0000';
+            if (type === 'error') div.classList.add('error');
             div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
             outputStream.appendChild(div);
             outputStream.scrollTop = outputStream.scrollHeight;
+
+            if (text.includes("READY")) {
+                nodeStatus.textContent = "NODE_STATUS: READY";
+                nodeStatus.classList.add('ready');
+            }
         }
 
-        userInput.addEventListener('keypress', async (e) => {
+        userInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && userInput.value.trim() !== "") {
                 const msg = userInput.value;
-                printToTerminal(`USER: ${msg}`);
+                sysLog(`USER: ${msg}`);
                 userInput.value = "";
-
-                // ブリッジ経由でコマンド処理
-                // window.LVM_BRIDGE (大文字) と window.lvmBridge (小文字) 両方に対応
-                const bridge = window.LVM_BRIDGE || window.lvmBridge;
-                
-                if (bridge && typeof bridge.processCommand === 'function') {
-                    bridge.processCommand(msg);
-                } else {
-                    printToTerminal("ERROR: BRIDGE_NOT_FOUND. Check Console.", "error");
-                }
+                window.LVM_BRIDGE.processCommand(msg);
             }
         });
 
-        // 起動シーケンス
         window.onload = () => {
-            printToTerminal("Logos Logic Notebook v2.5.0 - Ready", "system");
-            if (window.LogosStorage && (window.LVM_BRIDGE || window.lvmBridge)) {
-                nodeStatus.textContent = "NODE_STATUS: READY";
-                nodeStatus.style.color = "#00ff00";
-                printToTerminal("SYSTEM_CORE: ALL_SYSTEMS_OPERATIONAL.", "system");
-            } else {
-                printToTerminal("SYSTEM_CORE: WAITING_FOR_COMPONENTS...", "error");
-            }
+            sysLog("Logos Logic Notebook v2.5.5 - Atomic Active", "system");
+            setTimeout(() => {
+                sysLog("LVM_SYSTEM: ALL_SYSTEMS_OPERATIONAL_READY", "system");
+            }, 500);
         };
-
-        // Service Worker の登録解除（キャッシュ問題を避けるため一時的に無効化を推奨）
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let registration of registrations) { registration.unregister(); }
-            });
-        }
     </script>
 </body>
 </html>
