@@ -1,67 +1,63 @@
 /**
- * LogosStorage.js
- * LVM(Logos Logic Engine) Persistence Layer
- * Manages the immutable ledger and state in IndexedDB.
+ * LogosStorage.js - v2.0.0
+ * LVM Sovereign Storage Layer
+ * グローバルアクセスを保証するための自己定義プロトコル
  */
-export class LogosStorage {
-    constructor(dbName = "LVM_World_State") {
-        this.dbName = dbName;
-        this.db = null;
-    }
 
-    async init() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.dbName, 1);
-            request.onupgradeneeded = (e) => {
-                const db = e.target.result;
-                // 最新の残高状態を保持するストア
-                if (!db.objectStoreNames.contains("accounts")) {
-                    db.createObjectStore("accounts", { keyPath: "id" });
-                }
-                // 監査ログ（歴史）を保持するストア
-                if (!db.objectStoreNames.contains("audit_logs")) {
-                    const logStore = db.createObjectStore("audit_logs", { keyPath: "timestamp" });
-                    logStore.createIndex("tx_type", "tx_type", { unique: false });
-                }
-            };
-            request.onsuccess = (e) => {
-                this.db = e.target.result;
-                resolve();
-            };
-            request.onerror = (e) => reject("LVM Storage Initialization Failed");
-        });
-    }
-
-    async getAllAccounts() {
-        return new Promise((resolve) => {
-            const tx = this.db.transaction("accounts", "readonly");
-            const store = tx.objectStore("accounts");
-            const request = store.getAll();
-            request.onsuccess = () => resolve(request.result);
-        });
-    }
-
-    async commitTransaction(updatedAccounts, newAuditEntry) {
-        const tx = this.db.transaction(["accounts", "audit_logs"], "readwrite");
-        const accountStore = tx.objectStore("accounts");
-        const logStore = tx.objectStore("audit_logs");
-
-        // アカウント状態の更新
-        for (const [id, balances] of Object.entries(updatedAccounts)) {
-            // BigIntをシリアライズするために文字列に変換して保存
-            const serializedBalances = {};
-            for (const [curr, dec] of Object.entries(balances)) {
-                serializedBalances[curr] = dec.value.toString();
+(function(global) {
+    const LogosStorage = {
+        // --- 内部データ構造 ---
+        // key: 'ASSETS', 'CONFIG', etc.
+        save: function(key, data) {
+            try {
+                const serialized = JSON.stringify(data);
+                localStorage.setItem(`LVM_${key}`, serialized);
+                return true;
+            } catch (e) {
+                console.error("STORAGE_SAVE_ERROR:", e);
+                return false;
             }
-            accountStore.put({ id, balances: serializedBalances });
+        },
+
+        load: function(key) {
+            try {
+                const data = localStorage.getItem(`LVM_${key}`);
+                return data ? JSON.parse(data) : null;
+            } catch (e) {
+                console.error("STORAGE_LOAD_ERROR:", e);
+                return null;
+            }
+        },
+
+        // --- 資産管理メソッド ---
+        getAssets: function() {
+            return this.load('ASSETS') || {};
+        },
+
+        registerAsset: function(symbol, details) {
+            const assets = this.getAssets();
+            // すでに存在していても上書き、または新規作成
+            assets[symbol] = {
+                symbol: symbol,
+                type: details.type || 'CRYPTO',
+                balance: details.balance || '0',
+                precision: details.precision || 8,
+                updatedAt: new Date().toISOString()
+            };
+            this.save('ASSETS', assets);
+            console.log(`STORAGE: ASSET_${symbol}_REGISTERED`);
+        },
+
+        clearAll: function() {
+            localStorage.removeItem('LVM_ASSETS');
+            console.warn("STORAGE: ALL_ASSETS_PURGED");
         }
+    };
 
-        // 監査ログの追記
-        logStore.add(newAuditEntry);
+    // --- グローバル空間への強制接続 ---
+    // これにより lvm_bridge.js から LogosStorage という名前でアクセス可能になる
+    global.LogosStorage = LogosStorage;
+    
+    console.log("LVM_STORAGE: GLOBAL_READY_AND_EXPOSED");
 
-        return new Promise((resolve, reject) => {
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject("Failed to commit to LVM Storage");
-        });
-    }
-}
+})(typeof window !== 'undefined' ? window : this);

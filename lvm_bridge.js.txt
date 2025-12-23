@@ -1,46 +1,33 @@
 /**
- * LVM_BRIDGE.js - v2.0.2
- * [PURE_LOGIC_MODE]: WASM依存を完全に排除し、JSコアを直接駆動する。
+ * lvm_bridge.js - v2.3.7
+ * 確実な接続のためのイベント待機プロトコル
  */
-class LvmBridge {
-    constructor() {
-        this.engineReady = false;
-        this.config = { version: "2.0.2", mode: "JS-CORE" };
-    }
-
-    async init() {
-        // --- 以前の32行目付近：ここからノイズを排除しました ---
-        console.log("%c LVM_BRIDGE v2.0.2: INITIALIZING... ", "background: #000; color: #d4af37");
-        
-        // JSエンジンを即座に有効化し、不必要なエラー出力を回避
-        this.engineReady = true;
-        
-        console.log("%c LVM_CORE: LOGOS_JS_ENGINE_READY ", "color: #00ff00");
-        // --------------------------------------------------
-
-        if (typeof updateSystemStatus === "function") {
-            updateSystemStatus("READY");
+const LVM_BRIDGE = {
+    version: "2.3.7",
+    init: function() {
+        if (window.LogosStorage) {
+            console.log("LVM_STORAGE: DETECTED.");
+            this.logToTerminal(`SYSTEM_ONLINE: v${this.version} READY`, "system");
+            if (window.updateVisualAssets) window.updateVisualAssets();
+        } else {
+            console.error("LVM_BRIDGE: LogosStorage still missing after load.");
         }
-    }
-
-    async sendMessage(userInput) {
-        if (!this.engineReady) await this.init();
-        console.log(`LVM_BRIDGE: SENDING > ${userInput}`);
+    },
+    logToTerminal: function(msg, type = "") {
+        if (typeof sysLog === 'function') sysLog(msg, type);
+        else console.log(`[TERMINAL] ${msg}`);
+    },
+    processCommand: function(input) {
+        const args = input.trim().toUpperCase().split(/\s+/);
+        // ここで LogosStorage を window.LogosStorage として使う
+        if (!window.LogosStorage) return this.logToTerminal("ERROR: STORAGE_LOST", "error");
         
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: userInput })
-            });
-            const data = await response.json();
-            return data.reply;
-        } catch (e) {
-            console.warn("LVM_BRIDGE: API_OFFLINE", e);
-            return "LVM_ERROR: 外部知能（Gemini）との同期に失敗しました。";
-        }
+        // ... (以下、GENERATE, MINT などの処理を window.LogosStorage 経由で記述)
     }
-}
+};
 
-const lvmBridge = new LvmBridge();
-window.addEventListener('DOMContentLoaded', () => lvmBridge.init());
+// 全てのファイルが読み込まれた「後」に初期化を実行
+window.addEventListener('load', () => {
+    window.LVM_BRIDGE = LVM_BRIDGE;
+    LVM_BRIDGE.init();
+});
