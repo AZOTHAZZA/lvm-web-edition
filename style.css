@@ -1,0 +1,15 @@
+/* style.css - LVM Sovereign UI */
+body {
+    background-color: #050505;
+    color: #d4af37;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+#terminal {
+    width: 90%;
+    border: 1px solid #d4af37;
+    padding: 20px;
+    background: rgba(10, 10, 10, 0.9);
+}
