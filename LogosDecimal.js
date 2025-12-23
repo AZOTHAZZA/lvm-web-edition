@@ -1,0 +1,64 @@
+/**
+ * LogosDecimal.js - v2.0.1
+ * LVM High-Precision Logic Arithmetic Library
+ * [FIX]: Removed 'export' to prevent SyntaxError in standard script loading.
+ */
+
+class LogosDecimal {
+    /**
+     * @param {number|string} value - 初期値
+     */
+    constructor(value) {
+        this.value = BigInt(Math.floor(Number(value) * 1000000)); // 6桁の固定小数点
+        this.precision = 1000000n;
+    }
+
+    /**
+     * 加算
+     */
+    add(other) {
+        const otherVal = other instanceof LogosDecimal ? other.value : BigInt(Math.floor(Number(other) * 1000000));
+        this.value += otherVal;
+        return this;
+    }
+
+    /**
+     * 減算
+     */
+    sub(other) {
+        const otherVal = other instanceof LogosDecimal ? other.value : BigInt(Math.floor(Number(other) * 1000000));
+        this.value -= otherVal;
+        return this;
+    }
+
+    /**
+     * 乗算（比率計算用）
+     */
+    mul(ratio) {
+        this.value = (this.value * BigInt(Math.floor(Number(ratio) * 1000000))) / this.precision;
+        return this;
+    }
+
+    /**
+     * フォーマット済み文字列出力
+     */
+    toString() {
+        const str = this.value.toString();
+        const len = str.length;
+        if (len <= 6) {
+            return "0." + str.padStart(6, '0');
+        }
+        return str.slice(0, len - 6) + "." + str.slice(len - 6);
+    }
+
+    /**
+     * 数値として取得
+     */
+    toNumber() {
+        return Number(this.value) / Number(this.precision);
+    }
+}
+
+// ブラウザ環境でのグローバル登録
+window.LogosDecimal = LogosDecimal;
+console.log("%c LOGOS_DECIMAL: ARITHMETIC_ENGINE_READY ", "color: #d4af37; background: #000");
