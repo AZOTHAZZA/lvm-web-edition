@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LVM MASTER CONTROL v2.4.0</title>
+    <title>LVM MASTER CONTROL v2.4.1</title>
     <style>
         :root {
             --neon-gold: #d4af37;
@@ -64,13 +64,13 @@
 
 <div id="terminal">
     <div class="status-bar">
-        <span>LVM_CORE_v2.4.0</span>
+        <span>LVM_CORE_v2.4.1</span>
         <span>STATUS: <span id="system-status" class="loading">INITIALIZING...</span></span>
     </div>
 
     <div id="output">
         [LOGOS_SYSTEM_BOOT_SEQUENCE]<br>
-        > CLEANING_CACHE... SUCCESS.<br>
+        > SYNCHRONIZING_LOGIC_CORES...<br>
     </div>
 
     <div class="input-area">
@@ -79,26 +79,24 @@
 </div>
 
 <script>
-    (function(global) {
-        global.LogosStorage = {
-            save: function(key, data) {
-                localStorage.setItem(`LVM_${key}`, JSON.stringify(data));
-                return true;
-            },
-            load: function(key) {
-                const data = localStorage.getItem(`LVM_${key}`);
-                return data ? JSON.parse(data) : null;
-            },
-            getAssets: function() { return this.load('ASSETS') || {}; },
-            registerAsset: function(symbol, details) {
-                const assets = this.getAssets();
-                assets[symbol] = { symbol: symbol, balance: details.balance || '0' };
-                this.save('ASSETS', assets);
-                console.log("STORAGE: ASSET_LOCKED: " + symbol);
-            }
-        };
-        console.log("LVM_STORAGE: INLINE_MEMORY_CORE_READY");
-    })(window);
+    window.LogosStorage = {
+        save: function(key, data) {
+            localStorage.setItem(`LVM_${key}`, JSON.stringify(data));
+            return true;
+        },
+        load: function(key) {
+            const data = localStorage.getItem(`LVM_${key}`);
+            return data ? JSON.parse(data) : null;
+        },
+        getAssets: function() { return this.load('ASSETS') || {}; },
+        registerAsset: function(symbol, details) {
+            const assets = this.getAssets();
+            assets[symbol] = { symbol: symbol, balance: details.balance || '0' };
+            this.save('ASSETS', assets);
+            console.log("STORAGE: ASSET_REGISTERED: " + symbol);
+        }
+    };
+    console.log("LVM_STORAGE: CORE_INJECTED");
 </script>
 
 <script src="LogosDecimal.js"></script>
@@ -131,24 +129,28 @@
             if (window.LVM_BRIDGE) {
                 window.LVM_BRIDGE.processCommand(cmd);
             } else {
-                sysLog("ERROR: LVM_BRIDGE_OFFLINE", "error");
+                sysLog("ERROR: BRIDGE_OFFLINE - RETRYING...", "error");
             }
             inputField.value = '';
             output.scrollTop = output.scrollHeight;
         }
     });
 
-    // Bridgeが準備できるまで粘り強く待機する
-    function bootstrap() {
+    // Bridgeの初期化を確実に待機するロジック
+    function startLVM() {
         if (window.LVM_BRIDGE && window.LogosStorage) {
+            // Bridge側の初期化を再度叩く（もしStorage不足で止まっていた場合用）
+            if (typeof window.LVM_BRIDGE.init === 'function') {
+                window.LVM_BRIDGE.init();
+            }
             sysLog("LVM_SYSTEM: ALL_SYSTEMS_OPERATIONAL_READY", "system");
         } else {
-            console.log("Waiting for Bridge...");
-            setTimeout(bootstrap, 500);
+            console.log("LVM_BOOT: Waiting for dependencies...");
+            setTimeout(startLVM, 500);
         }
     }
 
-    window.addEventListener('load', bootstrap);
+    window.addEventListener('load', startLVM);
 </script>
 
 </body>
