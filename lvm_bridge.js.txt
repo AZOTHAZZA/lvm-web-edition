@@ -10,7 +10,7 @@ const LVM_BRIDGE = {
             this.logToTerminal(`SYSTEM_ONLINE: v${this.version} READY`, "system");
             if (window.updateVisualAssets) window.updateVisualAssets();
         } else {
-            console.error("LVM_BRIDGE: LogosStorage still missing after load.");
+ //           console.error("LVM_BRIDGE: LogosStorage still missing after load.");
         }
     },
     logToTerminal: function(msg, type = "") {
