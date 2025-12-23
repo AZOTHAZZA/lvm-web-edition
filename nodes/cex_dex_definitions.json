@@ -17,4 +17,5 @@
     "slippage_tolerance": "0.5%",
     "logic_connector": "identities/lvm_id_clone.js"
   }
+
 }
