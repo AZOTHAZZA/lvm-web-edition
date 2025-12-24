@@ -12,14 +12,14 @@
             font-family: 'Courier New', Courier, monospace;
             margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh;
         }
-        /* 市場観測（具象データのストリーム） */
+        /* 1. 経済観測（普遍データの監視） */
         .market-monitor {
             font-size: 0.7em; padding: 6px 20px; background: #000;
             display: flex; justify-content: space-between; color: #555; border-bottom: 1px solid #222;
         }
         .currency-value { color: #888; margin-left: 4px; }
 
-        /* 経済操作パネル（公理に基づいたアクション） */
+        /* 2. 経済操作（公理に基づいたアクション） */
         .action-panel {
             display: flex; background: var(--panel); padding: 10px; gap: 8px;
             border-bottom: 1px solid #333; justify-content: center; flex-wrap: wrap;
@@ -31,26 +31,27 @@
         }
         button:hover { background: var(--gold); color: #000; }
 
-        /* ステータス（価値のリアルタイム表示） */
+        /* 3. 資産ステータス */
         .status-bar {
             font-size: 0.8em; padding: 10px 20px; background: var(--dark);
             display: flex; justify-content: space-between; align-items: center;
         }
         #logos-value { color: var(--green); font-weight: bold; font-size: 1.1em; }
 
-        /* 出力（言語ゲームの展開） */
+        /* 4. 出力ターミナル */
         #terminal {
             flex-grow: 1; padding: 25px; overflow-y: auto;
             scrollbar-width: thin; scrollbar-color: #333 var(--bg);
         }
-        .line { margin-bottom: 12px; line-height: 1.6; word-break: break-all; }
+        .line { margin-bottom: 12px; line-height: 1.6; word-break: break-all; font-size: 0.95em; }
         .user { color: var(--green); }
         .ai { color: #fff; border-left: 1px solid var(--gold); padding-left: 15px; margin: 15px 0; }
         .sys { color: var(--gold); opacity: 0.6; font-size: 0.85em; }
 
-        /* 入力（論理のインターフェース） */
+        /* 5. 入力インターフェース */
         #input-area {
             padding: 20px; background: #0a0a0a; display: flex; align-items: center; border-top: 1px solid #222;
+            transition: background-color 0.3s;
         }
         #prompt { margin-right: 15px; color: var(--green); font-weight: bold; }
         input {
@@ -79,7 +80,7 @@
     </div>
 
     <div class="status-bar">
-        <span>CORE: LVM-ORIGIN</span>
+        <span>ID: LVM-ORIGIN</span>
         <span id="logos-value">0.00000 LOGOS</span>
         <span id="node-status" style="color:var(--green)">NODE: ONLINE</span>
     </div>
@@ -87,22 +88,26 @@
     <div id="terminal">
         <div id="output">
             <div class="line sys">LVM_SYSTEM_BOOT: SUCCESS. [AXIOM_LAYER_CONNECTED]</div>
-            <div class="line sys">普遍的論理による価値生成を開始します。</div>
+            <div class="line sys">普遍的論理による価値生成と経済操作を待機中。</div>
         </div>
     </div>
 
     <div id="input-area">
         <span id="prompt">&gt;</span>
-        <input type="text" id="user-input" placeholder="論理を入力し、価値を生成..." autofocus autocomplete="off">
+        <input type="text" id="user-input" placeholder="論理を入力..." autofocus autocomplete="off">
     </div>
 
     <script>
         const output = document.getElementById('output');
         const userInput = document.getElementById('user-input');
+        const inputArea = document.getElementById('input-area');
         const logosDisplay = document.getElementById('logos-value');
 
-        // UIとロジックを繋ぐコントローラー
+        // LVM ユーザーインターフェース・コントローラー
         window.LVM_UI = {
+            currentAction: null,
+            pendingAddr: null,
+
             updateBalance() {
                 const balance = window.LogosAxiom.getBalance();
                 logosDisplay.textContent = `${balance.toFixed(window.LogosAxiom.DECIMALS)} LOGOS`;
@@ -117,46 +122,111 @@
                 document.getElementById('terminal').scrollTop = output.scrollHeight;
             },
 
+            // 各アクションの分岐処理
             async handle(action) {
-                this.write(`[ACTION] ${action} モジュールを実行します...`, 'sys');
+                const balance = window.LogosAxiom.getBalance();
+                this.write(`[CALL] ${action} モジュールをロードしました。`, 'sys');
+
+                switch(action) {
+                    case 'MINT':
+                        const d = 0.01; // 手動生成量
+                        window.LogosAxiom.saveBalance(balance + d);
+                        this.updateBalance();
+                        this.write(`MINT: 0.01000 LOGOS を手動生成し、公理層に保存しました。`, 'ai');
+                        break;
+
+                    case 'EXCHANGE':
+                        const jpy = window.LogosAxiom.getExchangeValue(balance, 'JPY');
+                        this.write(`EXCHANGE_RATE: 1 LOGOS ≈ 125,000 JPY (論理密度依拠)`, 'sys');
+                        this.write(`現在の総資産換算: 約 ${jpy.toLocaleString()} JPY 相当`, 'ai');
+                        break;
+
+                    case 'WITHDRAW':
+                        this.write(`[PROMPT] 出金希望額を入力してください (UNIT: LOGOS)`, 'sys');
+                        this.enterInteractionMode('WITHDRAW_AMOUNT');
+                        break;
+
+                    case 'TRANSFER':
+                        this.write(`[PROMPT] 送金先アドレス (LVM... / 0x...) を入力してください`, 'sys');
+                        this.enterInteractionMode('TRANSFER_ADDR');
+                        break;
+
+                    case 'VAULT':
+                        this.write(`VAULT_INFO: 資産は localStorage 物理層にて不変保存されています。`, 'ai');
+                        this.write(`Current LOGOS: ${balance.toFixed(5)}`, 'sys');
+                        break;
+                }
+            },
+
+            // 入力待機モードの開始
+            enterInteractionMode(mode) {
+                this.currentAction = mode;
+                inputArea.style.backgroundColor = "#221a00";
+                userInput.placeholder = "WAITING FOR DATA...";
+            },
+
+            // 経済アクションの実行・確定
+            finalizeAction(val) {
                 const balance = window.LogosAxiom.getBalance();
 
-                if (action === 'MINT') {
-                    const d = 0.001; // 手動ミント定数
-                    window.LogosAxiom.saveBalance(balance + d);
-                    this.updateBalance();
-                    this.write(`MINT: 0.00100 LOGOS を手動生成しました。`, 'ai');
-                } else if (action === 'EXCHANGE') {
-                    const jpy = window.LogosAxiom.getExchangeValue(balance, 'JPY');
-                    this.write(`EXCHANGE: 現在の論理密度は ${jpy.toLocaleString()} JPY に相当します。`, 'ai');
-                } else {
-                    this.write(`${action}: 外部プロトコルとの同期を待機しています。`, 'sys');
+                if (this.currentAction === 'WITHDRAW_AMOUNT') {
+                    const amount = parseFloat(val);
+                    const res = window.LogosAxiom.validateWithdraw(amount);
+                    if (res.success) {
+                        this.write(`EXECUTION: ${amount} LOGOS の出金手続きが完了しました。`, 'ai');
+                        this.updateBalance();
+                    } else {
+                        this.write(`DENIED: プロトコル違反 (${res.msg})`, 'sys');
+                    }
+                } 
+                else if (this.currentAction === 'TRANSFER_ADDR') {
+                    this.pendingAddr = val;
+                    this.write(`ADDRESS_REGISTERED: ${val}`, 'sys');
+                    this.write(`[PROMPT] 送金希望額を入力してください:`, 'sys');
+                    this.currentAction = 'TRANSFER_AMOUNT';
+                    return; // 次の入力を待つ
                 }
+                else if (this.currentAction === 'TRANSFER_AMOUNT') {
+                    const amt = parseFloat(val);
+                    const res = window.LogosAxiom.requestTransfer(amt, this.pendingAddr);
+                    if (res.success) {
+                        this.write(`SUCCESS: [ID:${res.txId}] ${amt} LOGOS を送出しました。`, 'ai');
+                        // 実際にはここで残高を引く処理を追加可能
+                    } else {
+                        this.write(`DENIED: 送金失敗 (${res.msg})`, 'sys');
+                    }
+                }
+
+                // モードリセット
+                this.currentAction = null;
+                inputArea.style.backgroundColor = "#0a0a0a";
+                userInput.placeholder = "論理を入力...";
             }
         };
 
-        // 入力処理
+        // 入力イベントリスナー
         userInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter' && userInput.value.trim() !== "") {
                 const msg = userInput.value;
-                LVM_UI.write(`USER: ${msg}`, 'user');
                 userInput.value = "";
 
-                // 1. 公理に基づいて密度を計算
-                const density = window.LogosAxiom.calculateDensity(msg);
-                const currentBalance = window.LogosAxiom.getBalance();
-                
-                // 2. 価値を保存
-                window.LogosAxiom.saveBalance(currentBalance + density);
-                LVM_UI.updateBalance();
-
-                // 3. 対話生成（将来的なAPI拡張）
-                LVM_UI.write(`LVM: 普遍的命題として受理されました。論理密度 ${density.toFixed(6)} を加算。`, 'ai');
+                if (window.LVM_UI.currentAction) {
+                    // 経済プロトコル進行中の場合
+                    window.LVM_UI.finalizeAction(msg);
+                } else {
+                    // 通常の論理入力・価値生成の場合
+                    LVM_UI.write(`USER: ${msg}`, 'user');
+                    const density = window.LogosAxiom.calculateDensity(msg);
+                    const currentBalance = window.LogosAxiom.getBalance();
+                    window.LogosAxiom.saveBalance(currentBalance + density);
+                    LVM_UI.updateBalance();
+                    LVM_UI.write(`LVM: 論理密度 ${density.toFixed(6)} を保存。価値が生成されました。`, 'ai');
+                }
             }
         });
 
         // 市場データの更新
-        function tick() {
+        function updateTick() {
             const f = (b, v) => (b + Math.random() * v).toFixed(2);
             document.getElementById('rate-jpy').textContent = f(148, 4);
             document.getElementById('rate-btc').textContent = Math.floor(f(68000, 2000)).toLocaleString();
@@ -165,8 +235,8 @@
 
         window.onload = () => {
             LVM_UI.updateBalance();
-            setInterval(tick, 5000);
-            tick();
+            setInterval(updateTick, 5000);
+            updateTick();
         };
     </script>
 </body>
