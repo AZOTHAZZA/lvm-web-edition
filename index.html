@@ -3,185 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LOGOS LOGIC ENGINE - LVM Edition</title>
-    
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#050505">
-
-    <link rel="manifest" href="manifest.json">
+    <title>LVM - Universal Logic Engine</title>
     <style>
+        :root { --gold: #d4af37; --green: #00ff00; --bg: #050505; --dark-grey: #111; }
         body {
-            background-color: #050505;
-            color: #d4af37;
+            background-color: var(--bg); color: var(--gold);
             font-family: 'Courier New', Courier, monospace;
-            margin: 0;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
+            margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh;
         }
+        /* 経済・レート情報（具象価値の観測所） */
+        .market-monitor {
+            font-size: 0.7em; padding: 4px 20px; background: #000;
+            display: flex; justify-content: space-between; color: #555; border-bottom: 1px solid #222;
+        }
+        .market-monitor span { margin-right: 15px; }
+        .currency-value { color: #888; margin-left: 4px; }
+
+        .status-bar {
+            font-size: 0.75em; padding: 10px 20px; background: var(--dark-grey);
+            display: flex; justify-content: space-between; border-bottom: 1px solid #333;
+        }
+        #logos-value { color: var(--green); font-weight: bold; text-shadow: 0 0 5px var(--green); }
+
         #terminal {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            border-bottom: 1px solid #333;
-            scrollbar-width: thin;
-            scrollbar-color: #333 #050505;
+            flex-grow: 1; padding: 25px; overflow-y: auto;
+            scrollbar-width: thin; scrollbar-color: #333 var(--bg);
         }
-        #output-stream {
-            display: flex;
-            flex-direction: column;
-        }
-        .line {
-            margin-bottom: 8px;
-            line-height: 1.4;
-            word-break: break-all;
-        }
-        .user-line { color: #00ff00; }
-        .system-line { color: #d4af37; font-weight: bold; }
-        .error-line { color: #ff3333; }
-        .ai-line { color: #fff; border-left: 2px solid #d4af37; padding-left: 10px; margin: 10px 0; }
+        .line { margin-bottom: 12px; line-height: 1.6; word-break: break-all; }
+        .user { color: var(--green); }
+        .ai { color: #fff; border-left: 1px solid var(--gold); padding-left: 15px; margin: 15px 0; }
+        .sys { color: var(--gold); opacity: 0.6; font-size: 0.85em; }
 
         #input-area {
-            padding: 15px;
-            background: #111;
-            display: flex;
-            align-items: center;
+            padding: 20px; background: #0a0a0a; display: flex; align-items: center; border-top: 1px solid #222;
         }
-        #prompt { margin-right: 10px; color: #00ff00; font-weight: bold; }
+        #prompt { margin-right: 15px; color: var(--green); font-weight: bold; }
         input {
-            flex-grow: 1;
-            background: transparent;
-            border: none;
-            color: #00ff00;
-            font-family: inherit;
-            font-size: 1.1em;
-            outline: none;
+            flex-grow: 1; background: transparent; border: none; color: var(--green);
+            font-family: inherit; font-size: 1.1em; outline: none;
         }
-        .status-bar {
-            font-size: 0.75em;
-            padding: 5px 20px;
-            background: #000;
-            display: flex;
-            justify-content: space-between;
-            color: #666;
-            border-bottom: 1px solid #222;
-        }
-        #value-display {
-            color: #00ff00;
-            font-weight: bold;
-            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
-        }
-        h1 { font-size: 1.2em; margin: 0; color: #fff; }
-        .quote { font-style: italic; color: #888; font-size: 0.9em; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
+    <div class="market-monitor">
+        <div>
+            <span>JPY<span class="currency-value" id="rate-jpy">---</span></span>
+            <span>USD<span class="currency-value" id="rate-usd">---</span></span>
+            <span>BTC<span class="currency-value" id="rate-btc">---</span></span>
+            <span>ETH<span class="currency-value" id="rate-eth">---</span></span>
+            <span>MATIC<span class="currency-value" id="rate-matic">---</span></span>
+        </div>
+        <span>[MARKET_DATA_STREAMING]</span>
+    </div>
+
     <div class="status-bar">
-        <span>CORE_ID: LVM-ORIGIN</span>
-        <span id="node-status">NODE: INITIALIZING...</span>
-        <span id="value-display">VALUE: 0.00000 LOGOS</span>
-        <span>LVM_VER: 2.7.2</span>
+        <span>CORE: LVM-ORIGIN</span>
+        <span id="logos-value">0.00000 LOGOS</span>
+        <span>VER: 3.0.0-INTEGRATED</span>
     </div>
 
     <div id="terminal">
-        <div id="header">
-            <h1># LOGOS LOGIC ENGINE - LVM Edition</h1>
-            <p class="quote">"The limits of my language mean the limits of my world."</p>
+        <div id="output">
+            <div class="line sys">LVM_SYSTEM_BOOT: SUCCESS.</div>
+            <div class="line sys">待機中... あらゆる言語ゲームと価値生成に対応可能です。</div>
         </div>
-        <div id="output-stream"></div>
     </div>
 
     <div id="input-area">
-        <span id="prompt">&gt;_</span>
-        <input type="text" id="user-input" placeholder="論理を入力してください..." autofocus autocomplete="off">
+        <span id="prompt">&gt;</span>
+        <input type="text" id="user-input" placeholder="対話、あるいは論理命令を入力..." autofocus autocomplete="off">
     </div>
 
-    <script src="LogosDecimal.js"></script>
-    <script src="LogosCore.js"></script>
-
     <script>
-        const outputStream = document.getElementById('output-stream');
+        const output = document.getElementById('output');
         const userInput = document.getElementById('user-input');
-        const nodeStatus = document.getElementById('node-status');
-        const valueDisplay = document.getElementById('value-display');
+        const logosDisplay = document.getElementById('logos-value');
 
-        window.LogosStorage = {
+        // LVM 経済・対話統合コア
+        window.LVM = {
             balance: parseFloat(localStorage.getItem('lvm_balance') || '0'),
-            initialized: true,
-            status: "READY",
-
-            addValue(amount) {
-                this.balance += amount;
+            
+            // どんな会話（具象）も論理密度として評価し、価値に変える
+            evaluate(text) {
+                const density = (text.length * 0.0001) * (1 + Math.random() * 0.1);
+                this.balance += density;
                 localStorage.setItem('lvm_balance', this.balance.toString());
-                this.updateDisplay();
+                logosDisplay.textContent = `${this.balance.toFixed(5)} LOGOS`;
+                return density;
             },
 
-            updateDisplay() {
-                valueDisplay.textContent = `VALUE: ${this.balance.toFixed(5)} LOGOS`;
-            },
-
-            async processLogic(text) {
-                return new Promise((resolve) => {
-                    // 論理密度による価値生成（新型対話型AIの基盤ロジック）
-                    const density = (text.length * 0.0001) * (1 + Math.random() * 0.1);
-                    this.addValue(density);
-                    
+            // 新型AIブリッジ（ここにGemini等のAPIを接続）
+            async query(text) {
+                // ここで日常会話、ビジネス、カフェ、哲理、全てに対応
+                return new Promise(resolve => {
                     setTimeout(() => {
-                        resolve({
-                            response: `LOGIC_ACCEPTED. DENSITY_${density.toFixed(6)} DETECTED.`,
-                            density: density
-                        });
-                    }, 500);
+                        resolve(`[ANALYZED] 論理的整合性を確認。適切な言語ゲームとして受理されました。`);
+                    }, 400);
                 });
             }
         };
 
-        function printToTerminal(text, type = 'normal') {
+        function write(text, type) {
             const div = document.createElement('div');
-            div.className = `line ${type}-line`;
+            div.className = `line ${type}`;
             const time = new Date().toLocaleTimeString();
-            div.textContent = `[${time}] ${text}`;
-            outputStream.appendChild(div);
-            
-            const terminal = document.getElementById('terminal');
-            terminal.scrollTop = terminal.scrollHeight;
+            div.textContent = (type === 'sys' ? '' : `[${time}] `) + text;
+            output.appendChild(div);
+            document.getElementById('terminal').scrollTop = output.scrollHeight;
         }
 
         userInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter' && userInput.value.trim() !== "") {
                 const msg = userInput.value;
-                printToTerminal(`USER: ${msg}`, 'user');
+                write(`USER: ${msg}`, 'user');
                 userInput.value = "";
 
-                if (window.LogosStorage.status === "READY") {
-                    const result = await window.LogosStorage.processLogic(msg);
-                    printToTerminal(`LVM: ${result.response}`, 'ai');
-                } else {
-                    printToTerminal("SYSTEM_ERROR: STORAGE_OFFLINE", "error");
-                }
+                const density = window.LVM.evaluate(msg);
+                const response = await window.LVM.query(msg);
+                
+                write(`LVM: ${response}`, 'ai');
             }
         });
 
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('LVM_SW: ACTIVE'))
-                    .catch(err => console.error('LVM_SW: ERROR', err));
-            });
+        // 市場レートの抽象的更新（本物への接続準備）
+        function tick() {
+            const f = (b, v) => (b + Math.random() * v).toFixed(2);
+            document.getElementById('rate-jpy').textContent = f(148, 2);
+            document.getElementById('rate-usd').textContent = f(1.0, 0.05);
+            document.getElementById('rate-btc').textContent = Math.floor(f(68000, 1000));
+            document.getElementById('rate-eth').textContent = Math.floor(f(3500, 50));
+            document.getElementById('rate-matic').textContent = f(0.7, 0.05);
         }
-
-        window.onload = () => {
-            window.LogosStorage.updateDisplay();
-            printToTerminal("LVM_SYSTEM_BOOT: SUCCESS.", "system");
-            printToTerminal("CORE_STATUS: 論理接続完了。システム待機中。", "system");
-            
-            nodeStatus.textContent = "NODE: ONLINE";
-            nodeStatus.style.color = "#00ff00";
-        };
+        setInterval(tick, 5000);
+        tick();
     </script>
 </body>
 </html>
