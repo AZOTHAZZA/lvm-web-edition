@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LVM - Universal Logic Engine</title>
+    <script src="LogosAxiom.js"></script>
     <style>
         :root { --gold: #d4af37; --green: #00ff00; --bg: #050505; --dark: #111; --panel: #1a1a1a; }
         body {
@@ -11,33 +12,33 @@
             font-family: 'Courier New', Courier, monospace;
             margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh;
         }
-        /* 経済モニタリング（普遍的観測） */
+        /* 市場観測（具象データのストリーム） */
         .market-monitor {
             font-size: 0.7em; padding: 6px 20px; background: #000;
             display: flex; justify-content: space-between; color: #555; border-bottom: 1px solid #222;
         }
-        .market-monitor span { margin-right: 15px; }
         .currency-value { color: #888; margin-left: 4px; }
 
-        /* 経済操作パネル（具象アクション） */
+        /* 経済操作パネル（公理に基づいたアクション） */
         .action-panel {
-            display: flex; background: var(--panel); padding: 10px; gap: 10px;
-            border-bottom: 1px solid #333; justify-content: center;
+            display: flex; background: var(--panel); padding: 10px; gap: 8px;
+            border-bottom: 1px solid #333; justify-content: center; flex-wrap: wrap;
         }
         button {
             background: transparent; border: 1px solid var(--gold); color: var(--gold);
-            padding: 5px 15px; cursor: pointer; font-family: inherit; font-size: 0.75em;
-            transition: 0.2s;
+            padding: 4px 12px; cursor: pointer; font-family: inherit; font-size: 0.7em;
+            transition: 0.2s; min-width: 90px;
         }
         button:hover { background: var(--gold); color: #000; }
-        button:active { transform: scale(0.95); }
 
+        /* ステータス（価値のリアルタイム表示） */
         .status-bar {
             font-size: 0.8em; padding: 10px 20px; background: var(--dark);
             display: flex; justify-content: space-between; align-items: center;
         }
-        #logos-value { color: var(--green); font-weight: bold; font-size: 1.2em; }
+        #logos-value { color: var(--green); font-weight: bold; font-size: 1.1em; }
 
+        /* 出力（言語ゲームの展開） */
         #terminal {
             flex-grow: 1; padding: 25px; overflow-y: auto;
             scrollbar-width: thin; scrollbar-color: #333 var(--bg);
@@ -47,6 +48,7 @@
         .ai { color: #fff; border-left: 1px solid var(--gold); padding-left: 15px; margin: 15px 0; }
         .sys { color: var(--gold); opacity: 0.6; font-size: 0.85em; }
 
+        /* 入力（論理のインターフェース） */
         #input-area {
             padding: 20px; background: #0a0a0a; display: flex; align-items: center; border-top: 1px solid #222;
         }
@@ -65,32 +67,33 @@
             <span>BTC<span class="currency-value" id="rate-btc">---</span></span>
             <span>MATIC<span class="currency-value" id="rate-matic">---</span></span>
         </div>
-        <span>LVM_ECONOMY_FLOW_ACTIVE</span>
+        <span>LVM_AXIOM_PROTOCOL_STABLE</span>
     </div>
 
     <div class="action-panel">
-        <button onclick="LVM_UI.execute('EXCHANGE')">EXCHANGE (変換)</button>
-        <button onclick="LVM_UI.execute('SEND')">TRANSFER (送金)</button>
-        <button onclick="LVM_UI.execute('WITHDRAW')">WITHDRAW (出金)</button>
-        <button onclick="LVM_UI.execute('VAULT')">VAULT (保存庫)</button>
+        <button onclick="LVM_UI.handle('MINT')">MINT (生成)</button>
+        <button onclick="LVM_UI.handle('EXCHANGE')">EXCHANGE (交換)</button>
+        <button onclick="LVM_UI.handle('TRANSFER')">TRANSFER (送金)</button>
+        <button onclick="LVM_UI.handle('WITHDRAW')">WITHDRAW (出金)</button>
+        <button onclick="LVM_UI.handle('VAULT')">VAULT (保存庫)</button>
     </div>
 
     <div class="status-bar">
-        <span>ID: LVM-ORIGIN</span>
+        <span>CORE: LVM-ORIGIN</span>
         <span id="logos-value">0.00000 LOGOS</span>
-        <span>NODE: ONLINE</span>
+        <span id="node-status" style="color:var(--green)">NODE: ONLINE</span>
     </div>
 
     <div id="terminal">
         <div id="output">
-            <div class="line sys">LVM_SYSTEM_INTEGRATION: v3.5.0 起動完了。</div>
-            <div class="line sys">論理は価値に、対話は資産に。</div>
+            <div class="line sys">LVM_SYSTEM_BOOT: SUCCESS. [AXIOM_LAYER_CONNECTED]</div>
+            <div class="line sys">普遍的論理による価値生成を開始します。</div>
         </div>
     </div>
 
     <div id="input-area">
         <span id="prompt">&gt;</span>
-        <input type="text" id="user-input" placeholder="論理入力、またはコマンド実行..." autofocus autocomplete="off">
+        <input type="text" id="user-input" placeholder="論理を入力し、価値を生成..." autofocus autocomplete="off">
     </div>
 
     <script>
@@ -98,73 +101,73 @@
         const userInput = document.getElementById('user-input');
         const logosDisplay = document.getElementById('logos-value');
 
-        // LVM 経済・対話・保存 コア
-        window.LVM = {
-            balance: parseFloat(localStorage.getItem('lvm_balance') || '0'),
-            rates: { jpy: 150, btc: 10000000, matic: 100 },
-
-            save() {
-                localStorage.setItem('lvm_balance', this.balance.toString());
-                logosDisplay.textContent = `${this.balance.toFixed(5)} LOGOS`;
-            },
-
-            evaluate(text) {
-                const density = (text.length * 0.00012) * (1 + Math.random() * 0.08);
-                this.balance += density;
-                this.save();
-                return density;
-            },
-
-            async query(text) {
-                // ここにAPIを接続
-                return new Promise(resolve => setTimeout(() => resolve(`論理受理。資産価値を更新しました。`), 400));
-            }
-        };
-
-        // UIアクション実行用
+        // UIとロジックを繋ぐコントローラー
         window.LVM_UI = {
-            execute(action) {
-                write(`[ACTION] ${action} モジュールを呼び出します...`, 'sys');
-                if(action === 'EXCHANGE') {
-                    const jpyVal = (window.LVM.balance * 100000).toLocaleString();
-                    write(`LVM_EXCHANGE: 現在の価値は約 ${jpyVal} JPY 相当です。`, 'ai');
-                }
-                if(action === 'VAULT') {
-                    write(`LVM_VAULT: ローカルストレージに ${window.LVM.balance.toFixed(5)} LOGOS を暗号化保存済み。`, 'ai');
-                }
-                if(action === 'SEND' || action === 'WITHDRAW') {
-                    write(`LVM_BRIDGE: 外部ネットワーク(Mainnet)へのゲートウェイを検索中...`, 'sys');
+            updateBalance() {
+                const balance = window.LogosAxiom.getBalance();
+                logosDisplay.textContent = `${balance.toFixed(window.LogosAxiom.DECIMALS)} LOGOS`;
+            },
+
+            write(text, type) {
+                const div = document.createElement('div');
+                div.className = `line ${type}`;
+                const time = new Date().toLocaleTimeString();
+                div.textContent = (type === 'sys' ? '' : `[${time}] `) + text;
+                output.appendChild(div);
+                document.getElementById('terminal').scrollTop = output.scrollHeight;
+            },
+
+            async handle(action) {
+                this.write(`[ACTION] ${action} モジュールを実行します...`, 'sys');
+                const balance = window.LogosAxiom.getBalance();
+
+                if (action === 'MINT') {
+                    const d = 0.001; // 手動ミント定数
+                    window.LogosAxiom.saveBalance(balance + d);
+                    this.updateBalance();
+                    this.write(`MINT: 0.00100 LOGOS を手動生成しました。`, 'ai');
+                } else if (action === 'EXCHANGE') {
+                    const jpy = window.LogosAxiom.getExchangeValue(balance, 'JPY');
+                    this.write(`EXCHANGE: 現在の論理密度は ${jpy.toLocaleString()} JPY に相当します。`, 'ai');
+                } else {
+                    this.write(`${action}: 外部プロトコルとの同期を待機しています。`, 'sys');
                 }
             }
         };
 
-        function write(text, type) {
-            const div = document.createElement('div');
-            div.className = `line ${type}`;
-            div.textContent = (type === 'sys' ? '' : `[${new Date().toLocaleTimeString()}] `) + text;
-            output.appendChild(div);
-            document.getElementById('terminal').scrollTop = output.scrollHeight;
-        }
-
+        // 入力処理
         userInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter' && userInput.value.trim() !== "") {
                 const msg = userInput.value;
-                write(`USER: ${msg}`, 'user');
+                LVM_UI.write(`USER: ${msg}`, 'user');
                 userInput.value = "";
-                window.LVM.evaluate(msg);
-                const response = await window.LVM.query(msg);
-                write(`LVM: ${response}`, 'ai');
+
+                // 1. 公理に基づいて密度を計算
+                const density = window.LogosAxiom.calculateDensity(msg);
+                const currentBalance = window.LogosAxiom.getBalance();
+                
+                // 2. 価値を保存
+                window.LogosAxiom.saveBalance(currentBalance + density);
+                LVM_UI.updateBalance();
+
+                // 3. 対話生成（将来的なAPI拡張）
+                LVM_UI.write(`LVM: 普遍的命題として受理されました。論理密度 ${density.toFixed(6)} を加算。`, 'ai');
             }
         });
 
+        // 市場データの更新
         function tick() {
             const f = (b, v) => (b + Math.random() * v).toFixed(2);
-            document.getElementById('rate-jpy').textContent = f(148, 2);
-            document.getElementById('rate-btc').textContent = Math.floor(f(68000, 1000));
-            document.getElementById('rate-matic').textContent = f(0.7, 0.05);
+            document.getElementById('rate-jpy').textContent = f(148, 4);
+            document.getElementById('rate-btc').textContent = Math.floor(f(68000, 2000)).toLocaleString();
+            document.getElementById('rate-matic').textContent = f(0.65, 0.1);
         }
-        setInterval(tick, 5000);
-        tick();
+
+        window.onload = () => {
+            LVM_UI.updateBalance();
+            setInterval(tick, 5000);
+            tick();
+        };
     </script>
 </body>
 </html>
