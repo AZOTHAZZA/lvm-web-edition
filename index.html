@@ -11,7 +11,6 @@
     <meta name="theme-color" content="#050505">
 
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css">
     <style>
         body {
             background-color: #050505;
@@ -28,12 +27,30 @@
             padding: 20px;
             overflow-y: auto;
             border-bottom: 1px solid #333;
+            scrollbar-width: thin;
+            scrollbar-color: #333 #050505;
         }
+        #output-stream {
+            display: flex;
+            flex-direction: column;
+        }
+        .line {
+            margin-bottom: 8px;
+            line-height: 1.4;
+            word-break: break-all;
+        }
+        .user-line { color: #00ff00; }
+        .system-line { color: #d4af37; font-weight: bold; }
+        .error-line { color: #ff3333; }
+        .ai-line { color: #fff; border-left: 2px solid #d4af37; padding-left: 10px; margin: 10px 0; }
+
         #input-area {
             padding: 15px;
             background: #111;
             display: flex;
+            align-items: center;
         }
+        #prompt { margin-right: 10px; color: #00ff00; font-weight: bold; }
         input {
             flex-grow: 1;
             background: transparent;
@@ -44,34 +61,43 @@
             outline: none;
         }
         .status-bar {
-            font-size: 0.8em;
+            font-size: 0.75em;
             padding: 5px 20px;
             background: #000;
             display: flex;
             justify-content: space-between;
             color: #666;
+            border-bottom: 1px solid #222;
         }
+        #value-display {
+            color: #00ff00;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+        h1 { font-size: 1.2em; margin: 0; color: #fff; }
+        .quote { font-style: italic; color: #888; font-size: 0.9em; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
     <div class="status-bar">
-        <span>SYSTEM_ID: LVM-01</span>
-        <span id="node-status">NODE_STATUS: INITIALIZING...</span>
-        <span>VER: 2.7.0</span>
+        <span>LOC: SE-YA_KANAGAWA_JP</span>
+        <span id="node-status">NODE: INITIALIZING...</span>
+        <span id="value-display">VALUE: 0.00000 LOGOS</span>
+        <span>LVM_VER: 2.7.1</span>
     </div>
 
     <div id="terminal">
-        <div style="color: #fff; margin-bottom: 20px;">
-            <h1># LOGOS LOGIC ENGINE</h1>
-            <p style="color: #888;">"The limits of my language mean the limits of my world."</p>
+        <div id="header">
+            <h1># LOGOS LOGIC ENGINE - LVM Edition</h1>
+            <p class="quote">"The limits of my language mean the limits of my world."</p>
         </div>
         <div id="output-stream"></div>
     </div>
 
     <div id="input-area">
-        <span style="margin-right: 10px;">&gt;</span>
-        <input type="text" id="user-input" placeholder="Enter logic sequence..." autofocus>
+        <span id="prompt">&gt;_</span>
+        <input type="text" id="user-input" placeholder="論理を入力してください..." autofocus autocomplete="off">
     </div>
 
     <script src="LogosDecimal.js"></script>
@@ -79,74 +105,94 @@
 
     <script>
         /**
-         * LVM_BRIDGE_INTEGRATED:
-         * 外部ファイル lvm_bridge.js を廃止し、この HTML 内にストレージロジックを統合。
+         * LVM_CORE_INTEGRATION
+         * 瀬谷の静寂より生成される論理と通貨の統合ロジック
          */
+        const outputStream = document.getElementById('output-stream');
+        const userInput = document.getElementById('user-input');
+        const nodeStatus = document.getElementById('node-status');
+        const valueDisplay = document.getElementById('value-display');
+
+        // 通貨管理用オブジェクト
         window.LogosStorage = {
+            balance: parseFloat(localStorage.getItem('lvm_balance') || '0'),
             initialized: true,
             status: "READY",
-            async sendMessage(text) {
-                // ここに本来のAPI送信ロジックを記述（現在はシミュレーション）
+
+            // 通貨加算
+            addValue(amount) {
+                this.balance += amount;
+                localStorage.setItem('lvm_balance', this.balance.toString());
+                this.updateDisplay();
+            },
+
+            updateDisplay() {
+                valueDisplay.textContent = `VALUE: ${this.balance.toFixed(5)} LOGOS`;
+            },
+
+            // 対話生成と価値評価
+            async processLogic(text) {
+                // 将来的にここにGemini等のAPI接続を実装
                 return new Promise((resolve) => {
-                    setTimeout(() => resolve(`PROCESSED: ${text.toUpperCase()}`), 500);
+                    // 論理密度の計算（新型AIの評価基準）
+                    const density = (text.length * 0.0001) * (1 + Math.random() * 0.1);
+                    this.addValue(density);
+                    
+                    setTimeout(() => {
+                        resolve({
+                            response: `論理を受理。密度 ${density.toFixed(6)} を検知。価値を生成しました。`,
+                            density: density
+                        });
+                    }, 600);
                 });
             }
         };
 
-        const outputStream = document.getElementById('output-stream');
-        const userInput = document.getElementById('user-input');
-        const nodeStatus = document.getElementById('node-status');
-
         function printToTerminal(text, type = 'normal') {
             const div = document.createElement('div');
-            div.style.marginBottom = '10px';
-            if (type === 'system') div.style.color = '#d4af37';
-            if (type === 'error') div.style.color = '#ff0000';
-            div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+            div.className = `line ${type}-line`;
+            const time = new Date().toLocaleTimeString();
+            div.textContent = `[${time}] ${text}`;
             outputStream.appendChild(div);
-            outputStream.scrollTop = outputStream.scrollHeight;
+            
+            // 自動スクロール
+            const terminal = document.getElementById('terminal');
+            terminal.scrollTop = terminal.scrollHeight;
         }
 
-        function updateSystemStatus(status) {
-            nodeStatus.textContent = `NODE_STATUS: ${status}`;
-            if (status === 'READY') {
-                nodeStatus.style.color = '#00ff00';
-                printToTerminal("SYSTEM_CORE: ATOMIC_INTEGRATION_COMPLETE. LOGOS_FILTER_ACTIVE.", "system");
-            }
-        }
-
+        // 入力イベント
         userInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter' && userInput.value.trim() !== "") {
                 const msg = userInput.value;
-                printToTerminal(`USER: ${msg}`);
+                printToTerminal(`USER: ${msg}`, 'user');
                 userInput.value = "";
 
-                if (window.LogosStorage && window.LogosStorage.initialized) {
-                    const response = await window.LogosStorage.sendMessage(msg);
-                    printToTerminal(`LVM: ${response}`, 'system');
+                if (window.LogosStorage.status === "READY") {
+                    const result = await window.LogosStorage.processLogic(msg);
+                    printToTerminal(`LVM: ${result.response}`, 'ai');
                 } else {
-                    printToTerminal("ERROR: STORAGE_NOT_READY", "error");
+                    printToTerminal("SYSTEM_ERROR: STORAGE_NOT_READY", "error");
                 }
             }
         });
 
-        // サービスワーカーの登録
+        // サービスワーカー登録（PWA化）
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
                     .then(reg => console.log('LVM_SW: REGISTERED', reg.scope))
-                    .catch(err => console.error('LVM_SW: REGISTRATION_FAILED', err));
+                    .catch(err => console.error('LVM_SW: FAILED', err));
             });
         }
 
+        // 初期化
         window.onload = () => {
-            printToTerminal("Logos Logic Notebook v2.7.0 - Ready", "system");
-            printToTerminal("Analyzing Wittgenstein Tractatus 5.6...", "system");
+            window.LogosStorage.updateDisplay();
+            printToTerminal("LVM_SYSTEM_BOOT: SUCCESS.", "system");
+            printToTerminal("STANDBY: 瀬谷拠点より全方位へ論理展開準備完了。", "system");
             
-            // 起動時にステータスを READY に更新
-            if (window.LogosStorage && window.LogosStorage.status === "READY") {
-                updateSystemStatus('READY');
-            }
+            nodeStatus.textContent = "NODE: READY";
+            nodeStatus.style.color = "#00ff00";
         };
     </script>
 </body>
