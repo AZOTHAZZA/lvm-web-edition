@@ -81,10 +81,10 @@
 <body>
 
     <div class="status-bar">
-        <span>LOC: SE-YA_KANAGAWA_JP</span>
+        <span>CORE_ID: LVM-ORIGIN</span>
         <span id="node-status">NODE: INITIALIZING...</span>
         <span id="value-display">VALUE: 0.00000 LOGOS</span>
-        <span>LVM_VER: 2.7.1</span>
+        <span>LVM_VER: 2.7.2</span>
     </div>
 
     <div id="terminal">
@@ -104,22 +104,16 @@
     <script src="LogosCore.js"></script>
 
     <script>
-        /**
-         * LVM_CORE_INTEGRATION
-         * 瀬谷の静寂より生成される論理と通貨の統合ロジック
-         */
         const outputStream = document.getElementById('output-stream');
         const userInput = document.getElementById('user-input');
         const nodeStatus = document.getElementById('node-status');
         const valueDisplay = document.getElementById('value-display');
 
-        // 通貨管理用オブジェクト
         window.LogosStorage = {
             balance: parseFloat(localStorage.getItem('lvm_balance') || '0'),
             initialized: true,
             status: "READY",
 
-            // 通貨加算
             addValue(amount) {
                 this.balance += amount;
                 localStorage.setItem('lvm_balance', this.balance.toString());
@@ -130,20 +124,18 @@
                 valueDisplay.textContent = `VALUE: ${this.balance.toFixed(5)} LOGOS`;
             },
 
-            // 対話生成と価値評価
             async processLogic(text) {
-                // 将来的にここにGemini等のAPI接続を実装
                 return new Promise((resolve) => {
-                    // 論理密度の計算（新型AIの評価基準）
+                    // 論理密度による価値生成（新型対話型AIの基盤ロジック）
                     const density = (text.length * 0.0001) * (1 + Math.random() * 0.1);
                     this.addValue(density);
                     
                     setTimeout(() => {
                         resolve({
-                            response: `論理を受理。密度 ${density.toFixed(6)} を検知。価値を生成しました。`,
+                            response: `LOGIC_ACCEPTED. DENSITY_${density.toFixed(6)} DETECTED.`,
                             density: density
                         });
-                    }, 600);
+                    }, 500);
                 });
             }
         };
@@ -155,12 +147,10 @@
             div.textContent = `[${time}] ${text}`;
             outputStream.appendChild(div);
             
-            // 自動スクロール
             const terminal = document.getElementById('terminal');
             terminal.scrollTop = terminal.scrollHeight;
         }
 
-        // 入力イベント
         userInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter' && userInput.value.trim() !== "") {
                 const msg = userInput.value;
@@ -171,27 +161,25 @@
                     const result = await window.LogosStorage.processLogic(msg);
                     printToTerminal(`LVM: ${result.response}`, 'ai');
                 } else {
-                    printToTerminal("SYSTEM_ERROR: STORAGE_NOT_READY", "error");
+                    printToTerminal("SYSTEM_ERROR: STORAGE_OFFLINE", "error");
                 }
             }
         });
 
-        // サービスワーカー登録（PWA化）
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('LVM_SW: REGISTERED', reg.scope))
-                    .catch(err => console.error('LVM_SW: FAILED', err));
+                    .then(reg => console.log('LVM_SW: ACTIVE'))
+                    .catch(err => console.error('LVM_SW: ERROR', err));
             });
         }
 
-        // 初期化
         window.onload = () => {
             window.LogosStorage.updateDisplay();
             printToTerminal("LVM_SYSTEM_BOOT: SUCCESS.", "system");
-            printToTerminal("STANDBY: 瀬谷拠点より全方位へ論理展開準備完了。", "system");
+            printToTerminal("CORE_STATUS: 論理接続完了。システム待機中。", "system");
             
-            nodeStatus.textContent = "NODE: READY";
+            nodeStatus.textContent = "NODE: ONLINE";
             nodeStatus.style.color = "#00ff00";
         };
     </script>
